@@ -1,0 +1,40 @@
+import pandas as pd
+
+#buffer zone
+NE = 40
+E = 60
+cons = 50
+xls = pd. ExcelFile('hscei review material.xlsx')
+df = pd.read_excel(xls, 'Sheet1')
+
+#ranking
+df['MV rank'] = df['MV'].rank(ascending=False)
+df['FFMV rank'] = df['FFMV'].rank(ascending=False)
+df['Combined Score'] = 0.5 * df['MV rank'] + 0.5000000000001 * df['FFMV rank']
+df['Combined Rank'] = df['Combined Score'].rank(ascending=True)
+df = df.sort_values(by='Combined Rank')
+df = df.reset_index(drop=True)
+
+#selection
+df['Selection'] = ""
+df.loc[(df['Existing'] == 'X') & (df['Combined Rank'] <= NE), 'Selection'] = 'NE'
+df.loc[(df['Existing'] == 'Y') & (df['Combined Rank'] <= E), 'Selection'] = 'E'
+df['Selection Final'] = ""
+df.loc[df['Selection'] != "", 'Selection Final'] = 'Y'
+
+#final addition (not NE nor E)
+curr_cons = int(df[df['Selection Final'] == 'Y'].count()['Selection Final'])
+addition = cons - curr_cons
+i = 1
+while addition>0:
+    if df.loc[i, 'Selection Final'] == "":
+        df.loc[i, 'Selection Final'] = 'Y'
+        addition = addition-1
+    i = i+1
+
+# add/remove column
+df['add/removal'] = ""
+df.loc[(df ['Existing'] == 'X') & (df ['Selection Final'] == 'Y' ), 'add/removal'] = 'add'
+df.loc[(df['Existing'] == 'Y') & (df['Selection Final'] == ''), 'add/removal'] = 'remove'
+df = df.reset_index(drop=True)
+df.to_csv('review result.csv')
